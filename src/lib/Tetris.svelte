@@ -5,6 +5,17 @@
 	import type { Board, Tetrimonio } from './types';
 	import utils from './utils';
 
+	export let start = false;
+	export let gameOver = false;
+	export let fallInterval = 1000;
+
+	export const resetGame = () => {
+		initBoard();
+		start = true;
+		gameOver = false;
+		gameLoop();
+
+	};
 	// Define board size
 	const ROWS = 20;
 	const COLUMNS = 10;
@@ -17,7 +28,6 @@
 	let context: CanvasRenderingContext2D;
 	let board: Board = [];
 	let lastTime = 0;
-	let fallInterval = 1000;
 	let currentPiece: Tetrimonio = {
 		x: 0,
 		y: 0,
@@ -44,6 +54,7 @@
 					y: currentPiece.y,
 					color: currentPiece.color
 				};
+				checkGameOver();
 				fixTetrimonioOnBoard(tetrimonioNextPos);
 				resetCurrentPiece();
 				checkFullRow();
@@ -53,15 +64,25 @@
 
 		// Actualiza el tiempo de la última actualización
 	}
+
+	function checkGameOver() {
+		if (currentPiece.y > 0) return;
+		gameOver = true;
+		drawGameOver();
+	}
+
 	function resetCurrentPiece() {
-		currentPiece.x = 0;
-		currentPiece.y = 0;
 		let randomIndex = Math.floor(Math.random() * lib.tetrominos.length);
 		currentPiece.shape = lib.tetrominos[randomIndex];
+		const x = Math.floor(Math.random() * (COLUMNS - currentPiece.shape[0].length));
+		currentPiece.x = x;
+		currentPiece.y = -(currentPiece.shape.length - 1);
+		console.log(currentPiece);
 		const colors = ['red', 'blue', 'green', 'yellow', 'purple', 'orange', 'cyan'];
 		randomIndex = Math.floor(Math.random() * colors.length);
 		currentPiece.color = colors[randomIndex];
 	}
+
 	function checkFullRow() {
 		board.forEach((row, i) => {
 			if (row.every((cell) => cell.status === 1)) {
@@ -69,7 +90,7 @@
 				for (let prevI = i; prevI >= 0; prevI--) {
 					for (let prevJ = 0; prevJ < COLUMNS; prevJ++) {
 						if (board[prevI][prevJ].status === 1) {
-							board[prevI + 1][prevJ] = { status: 1, color: board[prevI][prevJ].color};
+							board[prevI + 1][prevJ] = { status: 1, color: board[prevI][prevJ].color };
 							board[prevI][prevJ] = { status: 0, color: 'black' };
 						}
 					}
@@ -114,7 +135,8 @@
 					) {
 						return true; // Colisión con el borde del tablero
 					}
-
+					if (boardY >= ROWS || boardY < 0) return false;
+					if (boardX >= COLUMNS || boardY < 0) return false;
 					// Comprueba si la celda en el tablero está ocupada por otra pieza
 					if (board[boardY][boardX].status === 1) {
 						return true; // Colisión con otra pieza
@@ -182,7 +204,7 @@
 	function gameLoop() {
 		drawBoard();
 		update();
-		requestAnimationFrame(gameLoop);
+		if (!gameOver && start) requestAnimationFrame(gameLoop);
 	}
 
 	function addControls() {
@@ -213,6 +235,17 @@
 			}
 		});
 	}
+
+	function drawGameOver() {
+		context.fillStyle = '#d3d3d380';
+		context.fillRect(0, 0, canvas.width, canvas.height);
+		context.font = '50px Courier New';
+		context.textAlign = 'center';
+		context.fillStyle = '#000000';
+
+		context.fillText('GAME OVER', canvas.width / 2, canvas.height / 2);
+	}
+
 	onMount(() => {
 		canvas = document.getElementById('tetris') as HTMLCanvasElement;
 		context = canvas.getContext('2d') as CanvasRenderingContext2D;
@@ -220,13 +253,14 @@
 		canvas.height = ROWS * BLOCK_SIZE;
 		lastTime = performance.now();
 		addControls();
-		//Create empty board;
 		initBoard();
 		gameLoop();
 	});
+
+	$: if (start) gameLoop();
 </script>
 
-<canvas id="tetris" />
+<canvas id="tetris"> TEST </canvas>
 
 <style>
 </style>
